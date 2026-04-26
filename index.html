@@ -222,40 +222,63 @@
   </main>
 
   <script>
-    // 請將以下 8 個網址替換成您的 Google 表單或其他問卷連結
-    const surveyUrls = [
-    "https://docs.google.com/forms/d/e/1FAIpQLSdzI3Oyh_ID4adT1evomEJJAT7aeH-rEPlOQtv5le6a3aS51A/viewform?usp=header",      "https://docs.google.com/forms/d/e/1FAIpQLScYpVJjjaSmfVHYOqMiYcPOmAToNH3PZA36BHQV2vCHtxoz4Q/viewform?usp=header",      "https://docs.google.com/forms/d/e/1FAIpQLScmYWYLz_pnZhj0S8VytX_5zQmz9xkHIVfGSkzJqMjeqgZGmg/viewform?usp=header",      "https://docs.google.com/forms/d/e/1FAIpQLSfm16FL3O3aeCqOfq0SeFxW9wAQHGwFeMON8qv5L-mPTjYDyQ/viewform?usp=header",      "https://docs.google.com/forms/d/e/1FAIpQLSdBa9AF9j39bxZSXqSj70wcREjvyftrTqPTE3LzmMDFIXbRug/viewform?usp=header",      "https://docs.google.com/forms/d/e/1FAIpQLSeYU-KAltVa5Md_0totwlAdPBz2d5hBWdtoTNlmJcTxEfK8qQ/viewform?usp=header",      "https://docs.google.com/forms/d/e/1FAIpQLSd4CmPUIyIfMYV-O5w6s5C92oi8xNr92bDjoFm5MaDo72s6lw/viewform?usp=header",      "https://docs.google.com/forms/d/e/1FAIpQLScLo9lOM-ojkQ7DPifWcyMAm3Wfxf2nLy0tBtss8Mm9wjvbfA/viewform?usp=header"
-    ];
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQ0dZb2tOslYLH7azQ1QLiEmrLcdV_TnYP2debhazjQ_RP8G0zQIS-4Ir1nsdwnBEe/exec";
 
-    const consentCheckbox = document.getElementById("consentCheckbox");
-    const startBtn = document.getElementById("startBtn");
-    const previewBtn = document.getElementById("previewBtn");
-    const statusText = document.getElementById("statusText");
+  const surveyUrls = [
+    "https://docs.google.com/forms/d/e/1FAIpQLSdzI3Oyh_ID4adT1evomEJJAT7aeH-rEPlOQtv5le6a3aS51A/viewform?usp=header",
+    "https://docs.google.com/forms/d/e/1FAIpQLScYpVJjjaSmfVHYOqMiYcPOmAToNH3PZA36BHQV2vCHtxoz4Q/viewform?usp=header",
+    "https://docs.google.com/forms/d/e/1FAIpQLScmYWYLz_pnZhj0S8VytX_5zQmz9xkHIVfGSkzJqMjeqgZGmg/viewform?usp=header",
+    "https://docs.google.com/forms/d/e/1FAIpQLSfm16FL3O3aeCqOfq0SeFxW9wAQHGwFeMON8qv5L-mPTjYDyQ/viewform?usp=header",
+    "https://docs.google.com/forms/d/e/1FAIpQLSdBa9AF9j39bxZSXqSj70wcREjvyftrTqPTE3LzmMDFIXbRug/viewform?usp=header",
+    "https://docs.google.com/forms/d/e/1FAIpQLSeYU-KAltVa5Md_0totwlAdPBz2d5hBWdtoTNlmJcTxEfK8qQ/viewform?usp=header",
+    "https://docs.google.com/forms/d/e/1FAIpQLSd4CmPUIyIfMYV-O5w6s5C92oi8xNr92bDjoFm5MaDo72s6lw/viewform?usp=header",
+    "https://docs.google.com/forms/d/e/1FAIpQLScLo9lOM-ojkQ7DPifWcyMAm3Wfxf2nLy0tBtss8Mm9wjvbfA/viewform?usp=header"
+  ];
 
-    consentCheckbox.addEventListener("change", function () {
-      startBtn.disabled = !this.checked;
-      if (this.checked) {
-        statusText.textContent = "已同意參與，可以開始作答。";
-      } else {
-        statusText.textContent = "請先勾選同意參與研究。";
-      }
-    });
-
-    function getRandomUrl() {
-      const randomIndex = Math.floor(Math.random() * surveyUrls.length);
-      return surveyUrls[randomIndex];
+  function getToken() {
+    let token = localStorage.getItem("surveyToken");
+    if (!token) {
+      token = "u_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+      localStorage.setItem("surveyToken", token);
     }
+    return token;
+  }
 
-    startBtn.addEventListener("click", function () {
-      const selectedUrl = getRandomUrl();
-      statusText.textContent = "系統分派中，請稍候...";
-      window.location.href = selectedUrl;
-    });
+  const consentCheckbox = document.getElementById("consentCheckbox");
+  const startBtn = document.getElementById("startBtn");
+  const previewBtn = document.getElementById("previewBtn");
+  const statusText = document.getElementById("statusText");
 
-    previewBtn.addEventListener("click", function () {
-      const selectedUrl = getRandomUrl();
-      statusText.textContent = `測試結果：本次會分派到 ${selectedUrl}`;
-    });
+  consentCheckbox.addEventListener("change", function () {
+    startBtn.disabled = !this.checked;
+    statusText.textContent = this.checked
+      ? "已同意參與，可以開始作答。"
+      : "請先勾選同意參與研究。";
+  });
+
+  startBtn.addEventListener("click", async function () {
+    startBtn.disabled = true;
+    statusText.textContent = "系統分派中，請稍候...";
+
+    try {
+      const token = getToken();
+      const res = await fetch(
+        `${SCRIPT_URL}?action=assign&token=${token}`
+      );
+      const data = await res.json();
+      const url = surveyUrls[data.group];
+      statusText.textContent = "分派完成，即將跳轉...";
+      window.location.href = url;
+    } catch (err) {
+      statusText.textContent = "發生錯誤，請重新整理後再試。";
+      startBtn.disabled = false;
+    }
+  });
+
+  previewBtn.addEventListener("click", function () {
+    const i = Math.floor(Math.random() * surveyUrls.length);
+    statusText.textContent = `測試結果：本次會分派到組別 ${i + 1}`;
+  });
   </script>
 </body>
 </html>
