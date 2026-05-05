@@ -1,4 +1,3 @@
- 
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -210,8 +209,8 @@
 
     <div class="button-row">
       <button id="startBtn" class="primary-btn" disabled>開始作答</button>
-      <button id="previewBtn" class="secondary-btn" type="button">測試隨機分派</button>
-      <span class="hint">正式上線前可先用「測試隨機分派」確認功能。</span>
+      <button id="previewBtn" class="secondary-btn" type="button">預覽下一個分派</button>
+      <span class="hint">正式上線前可先用「預覽下一個分派」確認功能（此按鈕不會佔用情境名額）。</span>
     </div>
 
     <div class="status" id="statusText"></div>
@@ -222,63 +221,73 @@
   </main>
 
   <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQ0dZb2tOslYLH7azQ1QLiEmrLcdV_TnYP2debhazjQ_RP8G0zQIS-4Ir1nsdwnBEe/exec";
+    // 8 組情境對應的 Google 表單網址
+    const surveyUrls = [
+      "https://docs.google.com/forms/d/e/1FAIpQLSdzI3Oyh_ID4adT1evomEJJAT7aeH-rEPlOQtv5le6a3aS51A/viewform?usp=header",
+      "https://docs.google.com/forms/d/e/1FAIpQLScYpVJjjaSmfVHYOqMiYcPOmAToNH3PZA36BHQV2vCHtxoz4Q/viewform?usp=header",
+      "https://docs.google.com/forms/d/e/1FAIpQLScmYWYLz_pnZhj0S8VytX_5zQmz9xkHIVfGSkzJqMjeqgZGmg/viewform?usp=header",
+      "https://docs.google.com/forms/d/e/1FAIpQLSfm16FL3O3aeCqOfq0SeFxW9wAQHGwFeMON8qv5L-mPTjYDyQ/viewform?usp=header",
+      "https://docs.google.com/forms/d/e/1FAIpQLSdBa9AF9j39bxZSXqSj70wcREjvyftrTqPTE3LzmMDFIXbRug/viewform?usp=header",
+      "https://docs.google.com/forms/d/e/1FAIpQLSeYU-KAltVa5Md_0totwlAdPBz2d5hBWdtoTNlmJcTxEfK8qQ/viewform?usp=header",
+      "https://docs.google.com/forms/d/e/1FAIpQLSd4CmPUIyIfMYV-O5w6s5C92oi8xNr92bDjoFm5MaDo72s6lw/viewform?usp=header",
+      "https://docs.google.com/forms/d/e/1FAIpQLScLo9lOM-ojkQ7DPifWcyMAm3Wfxf2nLy0tBtss8Mm9wjvbfA/viewform?usp=header"
+    ];
 
-  const surveyUrls = [
-    "https://docs.google.com/forms/d/e/1FAIpQLSdzI3Oyh_ID4adT1evomEJJAT7aeH-rEPlOQtv5le6a3aS51A/viewform?usp=header",
-    "https://docs.google.com/forms/d/e/1FAIpQLScYpVJjjaSmfVHYOqMiYcPOmAToNH3PZA36BHQV2vCHtxoz4Q/viewform?usp=header",
-    "https://docs.google.com/forms/d/e/1FAIpQLScmYWYLz_pnZhj0S8VytX_5zQmz9xkHIVfGSkzJqMjeqgZGmg/viewform?usp=header",
-    "https://docs.google.com/forms/d/e/1FAIpQLSfm16FL3O3aeCqOfq0SeFxW9wAQHGwFeMON8qv5L-mPTjYDyQ/viewform?usp=header",
-    "https://docs.google.com/forms/d/e/1FAIpQLSdBa9AF9j39bxZSXqSj70wcREjvyftrTqPTE3LzmMDFIXbRug/viewform?usp=header",
-    "https://docs.google.com/forms/d/e/1FAIpQLSeYU-KAltVa5Md_0totwlAdPBz2d5hBWdtoTNlmJcTxEfK8qQ/viewform?usp=header",
-    "https://docs.google.com/forms/d/e/1FAIpQLSd4CmPUIyIfMYV-O5w6s5C92oi8xNr92bDjoFm5MaDo72s6lw/viewform?usp=header",
-    "https://docs.google.com/forms/d/e/1FAIpQLScLo9lOM-ojkQ7DPifWcyMAm3Wfxf2nLy0tBtss8Mm9wjvbfA/viewform?usp=header"
-  ];
+    // Apps Script 部署後的 Web App 網址
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4j5hYBVN6let-6sVBYW6H5BkMW0260ksRvRRNU-Z1vtAoYPv3IP2w59Ob0mOxESoc/exec";
 
-  function getToken() {
-    let token = localStorage.getItem("surveyToken");
-    if (!token) {
-      token = "u_" + Date.now() + "_" + Math.random().toString(36).slice(2);
-      localStorage.setItem("surveyToken", token);
-    }
-    return token;
-  }
+    const consentCheckbox = document.getElementById("consentCheckbox");
+    const startBtn        = document.getElementById("startBtn");
+    const previewBtn      = document.getElementById("previewBtn");
+    const statusText      = document.getElementById("statusText");
 
-  const consentCheckbox = document.getElementById("consentCheckbox");
-  const startBtn = document.getElementById("startBtn");
-  const previewBtn = document.getElementById("previewBtn");
-  const statusText = document.getElementById("statusText");
+    consentCheckbox.addEventListener("change", function () {
+      startBtn.disabled = !this.checked;
+      statusText.textContent = this.checked
+        ? "已同意參與，可以開始作答。"
+        : "請先勾選同意參與研究。";
+    });
 
-  consentCheckbox.addEventListener("change", function () {
-    startBtn.disabled = !this.checked;
-    statusText.textContent = this.checked
-      ? "已同意參與，可以開始作答。"
-      : "請先勾選同意參與研究。";
-  });
-
-  startBtn.addEventListener("click", async function () {
-    startBtn.disabled = true;
-    statusText.textContent = "系統分派中，請稍候...";
-
-    try {
-      const token = getToken();
-      const res = await fetch(
-        `${SCRIPT_URL}?action=assign&token=${token}`
-      );
+    // 跟 Apps Script 拿一個情境編號
+    // action = "next" 會把計數器 +1（正式分派用）
+    // action = "peek" 只查看下一個會分到哪組，不會 +1（預覽用）
+    async function fetchIndex(action) {
+      const url = APPS_SCRIPT_URL + "?action=" + action;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
-      const url = surveyUrls[data.group];
-      statusText.textContent = "分派完成，即將跳轉...";
-      window.location.href = url;
-    } catch (err) {
-      statusText.textContent = "發生錯誤，請重新整理後再試。";
-      startBtn.disabled = false;
+      if (!data.ok) throw new Error("API 回傳錯誤");
+      return data.index; // 0~7
     }
-  });
 
-  previewBtn.addEventListener("click", function () {
-    const i = Math.floor(Math.random() * surveyUrls.length);
-    statusText.textContent = `測試結果：本次會分派到組別 ${i + 1}`;
-  });
+    // 開始作答：正式分派（會 +1）
+    startBtn.addEventListener("click", async function () {
+      startBtn.disabled = true;
+      statusText.textContent = "系統分派中，請稍候...";
+      try {
+        const idx = await fetchIndex("next");
+        window.location.href = surveyUrls[idx];
+      } catch (err) {
+        statusText.textContent = "分派失敗，請重新整理後再試一次。錯誤：" + err.message;
+        startBtn.disabled = false;
+      }
+    });
+
+    // 預覽下一個分派：不會 +1，只看下一個人會被分到哪組
+    previewBtn.addEventListener("click", async function () {
+      previewBtn.disabled = true;
+      const originalText = previewBtn.textContent;
+      previewBtn.textContent = "查詢中...";
+      try {
+        const idx = await fetchIndex("peek");
+        statusText.textContent = `下一個按「開始作答」的人將被分派到情境 ${idx + 1}（${surveyUrls[idx]}）`;
+      } catch (err) {
+        statusText.textContent = "預覽失敗：" + err.message;
+      } finally {
+        previewBtn.disabled = false;
+        previewBtn.textContent = originalText;
+      }
+    });
   </script>
 </body>
 </html>
