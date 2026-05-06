@@ -271,23 +271,7 @@
         statusText.textContent = "分派失敗，請重新整理後再試一次。錯誤：" + err.message;
         startBtn.disabled = false;
       }
-    });
-
-    // 預覽下一個分派：不會 +1，只看下一個人會被分到哪組
-    previewBtn.addEventListener("click", async function () {
-      previewBtn.disabled = true;
-      const originalText = previewBtn.textContent;
-      previewBtn.textContent = "查詢中...";
-      try {
-        const idx = await fetchIndex("peek");
-        statusText.textContent = `下一個按「開始作答」的人將被分派到情境 ${idx + 1}（${surveyUrls[idx]}）`;
-      } catch (err) {
-        statusText.textContent = "預覽失敗：" + err.message;
-      } finally {
-        previewBtn.disabled = false;
-        previewBtn.textContent = originalText;
-      }
-    });
+    });    
   </script>
 </body>
 </html>
