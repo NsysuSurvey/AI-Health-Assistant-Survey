@@ -248,12 +248,12 @@
     // 開始作答:正式分派(會 +1)
     startBtn.addEventListener("click", async function () {
       startBtn.disabled = true;
-      statusText.textContent = "系統分派中,請稍候...";
+      statusText.textContent = "";
       try {
         const idx = await fetchIndex("next");
         window.location.href = surveyUrls[idx];
       } catch (err) {
-        statusText.textContent = "分派失敗,請重新整理後再試一次。若持續發生,請來信 barbarossahsu@gmail.com。";
+        statusText.textContent = "";
         startBtn.disabled = false;
       }
     });
