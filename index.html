@@ -206,7 +206,6 @@
   </main>
 
   <script>
-    // 8 組情境對應的 Google 表單網址
     const surveyUrls = [
       "https://docs.google.com/forms/d/e/1FAIpQLScYpVJjjaSmfVHYOqMiYcPOmAToNH3PZA36BHQV2vCHtxoz4Q/viewform?usp=header",
       "https://docs.google.com/forms/d/e/1FAIpQLSfm16FL3O3aeCqOfq0SeFxW9wAQHGwFeMON8qv5L-mPTjYDyQ/viewform?usp=header",
@@ -214,7 +213,9 @@
       "https://docs.google.com/forms/d/e/1FAIpQLScLo9lOM-ojkQ7DPifWcyMAm3Wfxf2nLy0tBtss8Mm9wjvbfA/viewform?usp=header"
     ];
 
-    // Apps Script 部署後的 Web App 網址
+    // 將 Apps Script 回傳的奇數 (1,3,5,7) 對應到陣列 index (0,1,2,3)
+    const indexMap = { 1: 0, 3: 1, 5: 2, 7: 3 };
+
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4j5hYBVN6let-6sVBYW6H5BkMW0260ksRvRRNU-Z1vtAoYPv3IP2w59Ob0mOxESoc/exec";
 
     const consentCheckbox = document.getElementById("consentCheckbox");
@@ -228,25 +229,27 @@
         : "請先勾選同意參與研究。";
     });
 
-    // 跟 Apps Script 拿一個情境編號
     async function fetchIndex(action) {
       const url = APPS_SCRIPT_URL + "?action=" + action;
       const res = await fetch(url);
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
       if (!data.ok) throw new Error("API 回傳錯誤");
-      return data.index; // 0~7
+      return data.index; // 1, 3, 5, 7
     }
 
-    // 開始作答:正式分派(會 +1)
     startBtn.addEventListener("click", async function () {
       startBtn.disabled = true;
-      statusText.textContent = "";
+      statusText.textContent = "分派中，請稍候…";
       try {
-        const idx = await fetchIndex("next");
-        window.location.href = surveyUrls[idx];
+        const rawIdx = await fetchIndex("next");
+        const mappedIdx = indexMap[rawIdx];
+        if (mappedIdx === undefined) {
+          throw new Error("無效的情境編號：" + rawIdx);
+        }
+        window.location.href = surveyUrls[mappedIdx];
       } catch (err) {
-        statusText.textContent = "";
+        statusText.textContent = "連線失敗，請稍後再試。";
         startBtn.disabled = false;
       }
     });
